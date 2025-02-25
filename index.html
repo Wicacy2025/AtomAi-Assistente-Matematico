@@ -1,0 +1,408 @@
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AtomAI - Assistente de Matemática</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<style>
+ * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: Arial, sans-serif;
+}
+
+body {
+    background-color: #f0f0f0;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.container {
+    width: 380px;
+    height: 650px;
+    background-color: #fff;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+}
+
+.header {
+    background-color: #3498db;
+    color: white;
+    padding: 20px;
+    text-align: center;
+    position: relative;
+}
+
+.refresh-btn {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: rgba(255, 255, 255, 0.2);
+    border: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    color: white;
+    font-size: 16px;
+}
+
+.chat-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 15px;
+    overflow: hidden;
+}
+
+.welcome-message {
+    background-color: rgba(52, 152, 219, 0.1);
+    padding: 15px;
+    border-radius: 10px;
+    margin-bottom: 15px;
+    text-align: center;
+    color: #3498db;
+}
+
+.chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding-right: 5px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.user-message, .bot-message {
+    max-width: 80%;
+    padding: 10px 15px;
+    border-radius: 18px;
+    margin-bottom: 5px;
+}
+
+.user-message {
+    align-self: flex-end;
+    background-color: #3498db;
+    color: white;
+}
+
+.bot-message {
+    align-self: flex-start;
+    background-color: #e9e9eb;
+    color: #333;
+}
+
+.message-content {
+    word-wrap: break-word;
+}
+
+.input-container {
+    display: flex;
+    margin-top: 15px;
+    border-top: 1px solid #eee;
+    padding-top: 15px;
+}
+
+#user-input {
+    flex: 1;
+    padding: 12px 15px;
+    border: 1px solid #ddd;
+    border-radius: 25px;
+    outline: none;
+    font-size: 14px;
+}
+
+#send-btn {
+    width: 40px;
+    height: 40px;
+    margin-left: 10px;
+    background-color: #3498db;
+    border: none;
+    border-radius: 50%;
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+}
+
+.history-container {
+    padding: 15px;
+    background-color: #f9f9f9;
+    border-top: 1px solid #eee;
+}
+
+.history-container h2 {
+    font-size: 16px;
+    margin-bottom: 10px;
+    color: #555;
+}
+
+.history-list {
+    list-style: none;
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+.history-list li {
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+    color: #444;
+    font-size: 14px;
+}
+
+.history-list li:hover {
+    color: #3498db;
+}
+
+/* Barra de rolagem personalizada */
+::-webkit-scrollbar {
+    width: 5px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #999;
+}
+</style>
+<body>
+    <div class="container">
+        <div class="header">
+            <button id="refresh-btn" class="refresh-btn">
+                <i class="fas fa-sync-alt"></i>
+            </button>
+            <h1>AtomAI</h1>
+        </div>
+        
+        <div class="chat-container">
+            <div class="welcome-message">
+                <p>Olá, eu sou AtomAI, seu assistente de matemática básica.</p>
+            </div>
+            
+            <div id="chat-messages" class="chat-messages">
+                <div class="bot-message">
+                    <div class="message-content">
+                        Olá, vou te ajudar com as 4 operações básicas de matemática.
+                    </div>
+                </div>
+            </div>
+            
+            <div class="input-container">
+                <input type="text" id="user-input" placeholder="Digite sua pergunta...">
+                <button id="send-btn">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+        
+        <div class="history-container">
+            <h2>Perguntas Recentes</h2>
+            <ul id="history-list" class="history-list"></ul>
+        </div>
+    </div>
+    
+    <script src="script.js">
+           document.addEventListener('DOMContentLoaded', function() {
+    const userInput = document.getElementById('user-input');
+    const sendBtn = document.getElementById('send-btn');
+    const chatMessages = document.getElementById('chat-messages');
+    const historyList = document.getElementById('history-list');
+    const refreshBtn = document.getElementById('refresh-btn');
+    
+    let history = JSON.parse(localStorage.getItem('chatHistory')) || [];
+    
+    // Mostrar histórico
+    updateHistoryList();
+    
+    // Evento para enviar mensagem ao clicar no botão
+    sendBtn.addEventListener('click', handleUserMessage);
+    
+    // Evento para enviar mensagem ao pressionar Enter
+    userInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            handleUserMessage();
+        }
+    });
+    
+    // Evento para o botão de atualizar
+    refreshBtn.addEventListener('click', function() {
+        if (confirm('Deseja limpar esta conversa?')) {
+            chatMessages.innerHTML = `
+                <div class="bot-message">
+                    <div class="message-content">
+                        Olá, vou te ajudar com as 4 operações básicas de matemática.
+                    </div>
+                </div>
+            `;
+        }
+    });
+    
+    // Função para processar a mensagem do usuário
+    function handleUserMessage() {
+        const message = userInput.value.trim();
+        
+        if (message === '') return;
+        
+        // Adicionar mensagem do usuário ao chat
+        displayUserMessage(message);
+        
+        // Processar a resposta
+        const response = processMessage(message);
+        
+        // Adicionar mensagem do bot ao chat com um pequeno atraso
+        setTimeout(() => {
+            displayBotMessage(response);
+        }, 500);
+        
+        // Salvar no histórico
+        addToHistory(message);
+        
+        // Limpar o campo de entrada
+        userInput.value = '';
+    }
+    
+    // Adicionar uma mensagem do usuário ao chat
+    function displayUserMessage(message) {
+        const messageElement = document.createElement('div');
+        messageElement.className = 'user-message';
+        messageElement.innerHTML = `
+            <div class="message-content">${message}</div>
+        `;
+        chatMessages.appendChild(messageElement);
+        scrollToBottom();
+    }
+    
+    // Adicionar uma mensagem do bot ao chat
+    function displayBotMessage(message) {
+        const messageElement = document.createElement('div');
+        messageElement.className = 'bot-message';
+        messageElement.innerHTML = `
+            <div class="message-content">${message}</div>
+        `;
+        chatMessages.appendChild(messageElement);
+        scrollToBottom();
+    }
+    
+    // Processar a mensagem e retornar uma resposta
+    function processMessage(message) {
+        // Verificar por expressões matemáticas
+        const mathExpression = extractMathExpression(message);
+        
+        if (mathExpression) {
+            try {
+                // Avaliar a expressão matemática
+                const result = evaluateMathExpression(mathExpression);
+                return `${mathExpression} = ${result}`;
+            } catch (error) {
+                return "Desculpe, não consegui calcular essa expressão. Verifique se está correta.";
+            }
+        } else {
+            // Respostas para mensagens que não contêm expressões matemáticas
+            if (message.toLowerCase().includes('olá') || message.toLowerCase().includes('oi')) {
+                return "Olá! Como posso ajudar com suas contas matemáticas hoje?";
+            } else if (message.toLowerCase().includes('ajuda') || message.toLowerCase().includes('como funciona')) {
+                return "Eu posso resolver as 4 operações matemáticas básicas: adição (+), subtração (-), multiplicação (*) e divisão (/). Basta me enviar a expressão para calcular!";
+            } else {
+                return "Não entendi. Por favor, envie uma expressão matemática como '25 * 20' ou pergunte 'quanto é 10 + 5'.";
+            }
+        }
+    }
+    
+    // Função para extrair a expressão matemática da mensagem
+    function extractMathExpression(message) {
+        // Padrão para identificar operadores matemáticos
+        const operators = ['+', '-', '*', '/', 'x', '÷'];
+        
+        // Verificar se contém algum operador
+        const hasOperator = operators.some(op => message.includes(op));
+        
+        if (!hasOperator) return null;
+        
+        // Substituir 'x' por '*' e '÷' por '/'
+        let processedMessage = message.replace(/x/g, '*').replace(/÷/g, '/');
+        
+        // Remover "quanto é" e outras palavras comuns
+        processedMessage = processedMessage.replace(/quanto é|qual é o resultado de|calcule|resultado de/gi, '');
+        
+        // Extrair números e operadores
+        const mathExpression = processedMessage.match(/[0-9]+\s*[\+\-\*\/]\s*[0-9]+/);
+        
+        return mathExpression ? mathExpression[0].trim() : null;
+    }
+    
+    // Avaliar a expressão matemática
+    function evaluateMathExpression(expression) {
+        // Verificar se é uma divisão por zero
+        if (expression.includes('/')) {
+            const parts = expression.split('/');
+            if (parseFloat(parts[1].trim()) === 0) {
+                return "Erro: Divisão por zero não é permitida";
+            }
+        }
+        
+        // Calcular o resultado
+        // Usando Function ao invés de eval por segurança
+        return new Function(`return ${expression}`)();
+    }
+    
+    // Adicionar ao histórico
+    function addToHistory(message) {
+        // Limitar a 10 itens no histórico
+        if (history.length >= 10) {
+            history.pop();
+        }
+        
+        // Adicionar ao início do array
+        history.unshift(message);
+        
+        // Salvar no localStorage
+        localStorage.setItem('chatHistory', JSON.stringify(history));
+        
+        // Atualizar a exibição do histórico
+        updateHistoryList();
+    }
+    
+    // Atualizar a lista de histórico
+    function updateHistoryList() {
+        historyList.innerHTML = '';
+        
+        history.forEach(item => {
+            const li = document.createElement('li');
+            li.textContent = item;
+            li.addEventListener('click', function() {
+                userInput.value = item;
+                userInput.focus();
+            });
+            historyList.appendChild(li);
+        });
+    }
+    
+    // Rolar para o fim do chat
+    function scrollToBottom() {
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+});
+    </script>
+</body>
+</html>
